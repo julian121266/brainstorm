@@ -2,6 +2,7 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+from brainstorm.layers.ctc_layer import CtcLayerImpl
 
 from brainstorm.utils import LayerValidationError
 from brainstorm.structure.architecture import Connection
@@ -209,6 +210,20 @@ def elementwise_layer(spec):
     return layer, spec
 
 
+def ctc_layer(spec):
+    time_steps = spec.get('time_steps', 3)
+    batch_size = spec.get('batch_size', 2)
+    inputs = np.random.randn(time_steps, batch_size, 4)
+    inputs /= inputs.sum(2).reshape((time_steps, batch_size, 1))
+    spec['default'] = inputs
+    spec['labels'] = np.random.randint(1, 4, size=(time_steps, batch_size, 1))
+    layer = CtcLayerImpl('Ctc',
+                         {'default': ShapeTemplate('T', 'B', 4),
+                          'labels': ShapeTemplate('T', 'B', 1)},
+                         NO_CON, NO_CON)
+    return layer, spec
+
+
 layers_to_test = [
     noop_layer,
     loss_layer,
@@ -228,7 +243,8 @@ layers_to_test = [
     maxpooling_layer_2d,
     avgpooling_layer_2d,
     batch_norm_layer,
-    elementwise_layer
+    elementwise_layer,
+    ctc_layer
 ]
 
 ids = [f.__name__ for f in layers_to_test]
