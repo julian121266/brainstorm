@@ -424,6 +424,7 @@ class MonitorAccuracy(Hook):
         errors = 0
         totals = 0
         loss = []
+        BPC = 0
         log = OrderedDict()
         for _ in run_network(net, iterator):
             net.forward_pass()
@@ -449,12 +450,17 @@ class MonitorAccuracy(Hook):
                                          .outputs[self.mask_name])[:, :, 0]
                 errors += np.sum((out_class != target_class) * mask)
                 totals += np.sum(mask)
+                indices = np.eye(out.shape[2], dtype=np.bool)[target_class.astype(np.int32)-1]
+                BPC -= np.sum(np.log2(out[indices]))
             else:
                 errors += np.sum(out_class != target_class)
                 totals += np.prod(target_class.shape)
+                indices = np.eye(out.shape[2], dtype=np.bool)[target_class.astype(np.int32)-1]
+                BPC -= np.sum(np.log2(out[indices]))
 
         log['accuracy'] = 1.0 - errors / totals
         log['loss'] = np.mean(loss)
+        log['BPC'] = BPC / totals
         return log
 
 

@@ -109,6 +109,21 @@ class PyCudaHandler(Handler):
             self.copy_to(out, cumisc.sum(a))
         else:
             raise NotImplementedError
+    # NEW  -----------------------------------------------------------------
+
+    def modulo_mm(self, a, b, out):
+        modulo_mm_kernel(a, b, out)
+
+    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
+        clw_undo_update_kernel(batch_size, feature_size, timing_mod, b, out)
+
+    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing, hb_t, out):
+        clw_copy_add_act_of_inactive_kernel(batch_size, feature_size, timing, hb_t, out)
+
+    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing, out):
+        clw_set_inactive_to_zero_kernel(batch_size, feature_size, timing, out)
+
+    # END NEW  -------------------------------------------------------------
 
     def dot_mm(self, a, b, out, transa=False, transb=False):
         transa = 'T' if transa else 'N'
@@ -436,6 +451,33 @@ class PyCudaHandler(Handler):
 
 
 # ---------------- kernels ---------------- #
+
+# NEW ----------------------------------------------------------------------
+
+modulo_mm_kernel = ElementwiseKernel(
+    "int* x, int* y, int* out",
+    "out[i] = x[i] % y[i]",
+    "modulo_mm_kernel")
+
+clw_undo_update_kernel = ElementwiseKernel(
+    "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
+    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = y[i/batch_size + (i % batch_size)*feature_size]",
+    "clw_undo_update_kernel"
+)
+
+clw_copy_add_act_of_inactive_kernel = ElementwiseKernel(
+    "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
+    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] += y[i/batch_size + (i % batch_size)*feature_size]",
+    "clw_copy_add_act_of_inactive_kernel"
+)
+
+clw_set_inactive_to_zero_kernel = ElementwiseKernel(
+    "int batch_size, int feature_size, float* timing_mod, float* out",
+    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = 0.0",
+    "clw_undo_update_kernel"
+)
+# NEW END ------------------------------------------------------------------
+
 create_probabilistic_mask_kernel = ElementwiseKernel(
     "float* inp, float prob, float* mask",
     "if (inp[i] < prob) mask[i] = 1; else mask[i] = 0;",
