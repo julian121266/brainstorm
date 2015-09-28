@@ -94,12 +94,10 @@ class Clockword_RnnLayerImpl(LayerBaseImpl):
             if t > 0:
                 _h.fill(tmp, t)
                 _h.modulo_mm(timing, tmp, tmp)
-                # print(batch_size.shape)
-                # print(feature_size.shape)
-                # print(tmp.shape)
-                # print(Ha[t-1].shape)
-                # print(Ha[t].shape)
-                _h.clw_undo_update(batch_size, feature_size, tmp, Ha[t-1], Ha[t])
+
+                # For inactive nodes activations are reset
+                _h.clw_undo_update(batch_size, feature_size, tmp, outputs[t-1], outputs[t])
+                # _h.clw_undo_update(batch_size, feature_size, tmp, Ha[t-1], Ha[t])
 
             # NEW END ---------------------------------------------------------------------------------
 
