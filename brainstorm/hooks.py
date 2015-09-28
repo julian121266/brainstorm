@@ -426,6 +426,8 @@ class MonitorAccuracy(Hook):
         loss = []
         BPC = 0
         log = OrderedDict()
+        errors2 = 0
+
         for _ in run_network(net, iterator):
             net.forward_pass()
             loss.append(net.get_loss_value())
@@ -439,6 +441,7 @@ class MonitorAccuracy(Hook):
 
             out_class = np.argmax(out, axis=2)
             if target.shape[2] > 1:
+                assert(1 == 2)
                 target_class = np.argmax(target, axis=2)
             else:
                 target_class = target[:, :, 0]
@@ -450,7 +453,26 @@ class MonitorAccuracy(Hook):
                                          .outputs[self.mask_name])[:, :, 0]
                 errors += np.sum((out_class != target_class) * mask)
                 totals += np.sum(mask)
-                indices = np.eye(out.shape[2], dtype=np.bool)[target_class.astype(np.int32)-1]
+                # indices = np.eye(out.shape[2], dtype=np.bool)[target_class.astype(np.int32)-1]
+                indices = np.zeros((target.shape[0], target.shape[1], 50), dtype=bool)
+                indices2 = np.zeros((target.shape[0], target.shape[1], 50), dtype=bool)
+
+
+                for i in range(0, target.shape[0]):
+                    for j in range(0, target.shape[1]):
+                        max_index = target[i, j, 0]
+                        max_index_out = np.argmax(out[i, j])
+                        indices[i, j, max_index] = True
+                        indices2[i, j, max_index_out] = True
+                # print(np.amax(out_class.astype(np.int32)))
+                # print(np.amin(out_class.astype(np.int32)))
+                # indices2 = np.eye(out.shape[2], dtype=np.bool)[out_class.astype(np.int32)-1]
+                # print("prob. sum max, min, mean: ", out.sum(axis=2).max(), out.sum(axis=2).min(), out.sum(axis=2).mean())
+                # print("Prob. of target class", out[indices][0])
+                # print("Highest predicted prob.", out[indices2][0])
+                errors2 += np.sum(out[indices] != out[indices2])
+                assert out[indices2][0] >= out[indices][0]
+                # print('')
                 BPC -= np.sum(np.log2(out[indices]))
             else:
                 errors += np.sum(out_class != target_class)
@@ -461,6 +483,7 @@ class MonitorAccuracy(Hook):
         log['accuracy'] = 1.0 - errors / totals
         log['loss'] = np.mean(loss)
         log['BPC'] = BPC / totals
+        log['accuracy2'] = 1.0 - errors2 / totals
         return log
 
 
