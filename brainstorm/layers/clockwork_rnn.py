@@ -7,15 +7,15 @@ from brainstorm.utils import LayerValidationError, flatten_time
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 
-def Clockword_Rnn(size, timing, activation_function='tanh', name=None):
-    return ConstructionWrapper.create('Clockword_Rnn',
+def ClockworkRnn(size, timing, activation_function='tanh', name=None):
+    return ConstructionWrapper.create('ClockworkRnn',
                                       size=size,
                                       timing=timing,
                                       name=name,
                                       activation_function=activation_function)
 
 
-class Clockword_RnnLayerImpl(LayerBaseImpl):
+class ClockworkRnnLayerImpl(LayerBaseImpl):
     expected_kwargs = {'size', 'timing', 'activation_function'}
 
     def _setup_hyperparameters(self):
@@ -29,7 +29,7 @@ class Clockword_RnnLayerImpl(LayerBaseImpl):
                                        format(self.size))
 
     def set_handler(self, new_handler):
-        super(Clockword_RnnLayerImpl, self).set_handler(new_handler)
+        super(ClockworkRnnLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
         activation_functions = {
@@ -93,7 +93,7 @@ class Clockword_RnnLayerImpl(LayerBaseImpl):
             # NEW -------------------------------------------------------------------------------------
             if t > 0:
                 _h.fill(tmp, t)
-                _h.modulo_mm(timing, tmp, tmp)
+                _h.modulo_mm(tmp, timing, tmp)
 
                 # For inactive nodes activations are reset
                 _h.clw_undo_update(batch_size, feature_size, tmp, outputs[t-1], outputs[t])
@@ -122,17 +122,19 @@ class Clockword_RnnLayerImpl(LayerBaseImpl):
         self.act_func_deriv(Ha[T], outputs[T], dHb[T], dHa[T])
         for t in range(T - 1, -1, -1):
 
-            _h.fill(tmp, t)
-            _h.modulo_mm(timing, tmp, tmp)
+            _h.fill(tmp, t+1)
+            _h.modulo_mm(tmp, timing, tmp)
             _h.clw_copy_add_act_of_inactive(batch_size, feature_size, tmp, dHb[t+1], dHb[t])
-
+            _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dHa[t+1])
 
             _h.dot_add_mm(dHa[t + 1], R, dHb[t], transb=True)
             self.act_func_deriv(Ha[t], outputs[t],
                                 dHb[t], dHa[t])
 
             # set inactive nodes to 0 (activation delta)
-            _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dHa[t])
+            # _h.fill(tmp, t)
+            # _h.modulo_mm(tmp, timing, tmp)
+
 
         # Same as for standard RNN:
         flat_inputs = flatten_time(inputs)
