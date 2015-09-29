@@ -400,6 +400,19 @@ class DebugHandler(Handler):
         assert len(m.shape) == 2, "len({}) != 2".format(m.shape)
         self.handler.softmax_m(m.array, out.array)
 
+    # NEW
+    def modulo_mm(self, a, b, out):
+        self.handler.modulo_mm(a.array, b.array, out.array)
+
+    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
+        self.handler.clw_undo_update(batch_size, feature_size, timing_mod.array, b.array, out.array)
+
+    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing, hb_t, out):
+        self.handler.clw_copy_add_act_of_inactive(batch_size, feature_size, timing.array, hb_t.array, out.array)
+
+    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing, out):
+        self.handler.clw_set_inactive_to_zero(batch_size, feature_size, timing.array, out.array)
+
 
 # ############################ Helper Methods ############################### #
 

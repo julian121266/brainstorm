@@ -334,6 +334,41 @@ class NumpyHandler(Handler):
 
     # ---------------- Activation functions -----------------------------------
 
+    # NEW
+    def modulo_mm(self, a, b, out):
+        print('amod:', a.shape)
+        print('bmod:', b.shape)
+        print('outmod:', out.shape)
+        np.fmod(a, b, out)
+
+
+    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
+        # indices = (timing_mod != 0)
+        print('timing mod:', timing_mod)
+        print(timing_mod[:] == np.zeros(timing_mod.shape))
+        indices = np.where(timing_mod != 0)
+        print('batchsize:', batch_size)
+        print('featuresize:', feature_size)
+        # print('Out==batchsize:', out.shape[0] == batch_size)
+        # indices = np.matlib.repmat(indices, 1, out.shape[0])
+        print('indicesshape:', indices[0].shape)
+        if indices[0].shape[0]:
+            out[:, indices] = b[:, indices]
+
+    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing_mod, hb_t, out):
+        # indices = (timing[:] != 0)
+        indices = np.where(timing_mod != 0)
+        # indices = np.tile(indices, (out.shape[0], 1))
+        if indices[0].shape[0]:
+            out[:, indices] += hb_t[:, indices]
+
+    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing_mod, out):
+        # indices = (timing[:] != 0)
+        indices = np.where(timing_mod != 0)
+        # indices = np.tile(indices, (out.shape[0], 1))
+        if indices[0].shape[0]:
+            out[:, indices] = 0.0
+
     def sigmoid(self, x, y):
         y[:] = 1. / (1. + np.exp(-x))
 

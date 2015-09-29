@@ -258,3 +258,16 @@ class Handler(Describable):
     @abc.abstractmethod
     def softmax_m(self, m, out):
         """Applies softmax to matrix over last dimension"""
+
+    # NEW
+    def modulo_mm(self, a, b, out):
+        pass
+
+    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
+        pass
+
+    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing, hb_t, out):
+        pass
+
+    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing, out):
+        pass
