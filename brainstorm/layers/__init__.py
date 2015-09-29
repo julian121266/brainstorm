@@ -24,7 +24,7 @@ from brainstorm.layers.noop_layer import NoOp
 from brainstorm.layers.pooling_layer_2d import Pooling2D
 from brainstorm.layers.rnn_layer import Rnn
 from brainstorm.layers.squared_difference_layer import SquaredDifference
-from brainstorm.layers.clockwork_rnn import Clockword_Rnn
+from brainstorm.layers.clockwork_rnn import ClockworkRnn
 
 CONSTRUCTION_LAYERS = {}
 
