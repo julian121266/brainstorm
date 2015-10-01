@@ -3,21 +3,15 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.utils import LayerValidationError, flatten_time, \
     flatten_time_and_features
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.buffer_structure import (StructureTemplate,
+                                                   BufferStructure)
 
 
 def Classification(size, name=None):
-    return ConstructionWrapper.create('Classification',
-                                      size=size,
-                                      name=name)
-
-
-class ClassificationLayerImpl(LayerBaseImpl):
-    """
-    Softmax layer with integrated Multinomial-Cross-Entropy.
+    """Create a softmax layer with integrated Multinomial Loss.
 
     Operates like a FullyConnectedLayer with softmax activation function
     on 'default' input and puts results in 'output'.
@@ -29,39 +23,36 @@ class ClassificationLayerImpl(LayerBaseImpl):
     WARNING: This layer does not compute derivatives wrt the 'targets' input
     and it also does not use the deltas coming in from the 'outputs'.
     """
+    return ConstructionWrapper.create('Classification', size=size, name=name)
 
-    inputs = {'default': ShapeTemplate('T', 'B', '...'),
-              'targets': ShapeTemplate('T', 'B', 1)
-              }
 
-    outputs = {'output': ShapeTemplate('T', 'B', 'F'),
-               'loss': ShapeTemplate('T', 'B', 1)}
+class ClassificationLayerImpl(BaseLayerImpl):
 
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
+                       'targets': StructureTemplate('T', 'B', 1)}
     expected_kwargs = {'size'}
 
-    def _get_output_shapes(self):
-        s = self.kwargs.get('size', self.in_shapes.get('default').feature_size)
-        if not isinstance(s, int):
-            raise LayerValidationError('size must be int but was {}'.format(s))
+    def setup(self, kwargs, in_shapes):
+        in_size = in_shapes['default'].feature_size
+        self.size = kwargs.get('size', in_size)
 
-        return {'output': ShapeTemplate('T', 'B', s),
-                'loss': ShapeTemplate('T', 'B', 1)}
+        if not (isinstance(self.size, int) and self.size > 0):
+            raise LayerValidationError('Size must be a positive integer, '
+                                       'but was {}'.format(self.size))
 
-    def get_internal_structure(self):
-        internals = OrderedDict()
-        size = self.out_shapes['output'].feature_size
-        internals['Ha'] = ShapeTemplate('T', 'B', size)
-        internals['dHa'] = ShapeTemplate('T', 'B', size, is_backward_only=True)
-        return internals
-
-    def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
-        out_size = self.out_shapes['output'].feature_size
+        outputs = OrderedDict()
+        outputs['output'] = BufferStructure('T', 'B', self.size)
+        outputs['loss'] = BufferStructure('T', 'B', 1)
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(out_size, in_size)
-        parameters['bias'] = ShapeTemplate(out_size)
-        return parameters
+        parameters['W'] = BufferStructure(self.size, in_size)
+        parameters['bias'] = BufferStructure(self.size)
+
+        internals = OrderedDict()
+        internals['Ha'] = BufferStructure('T', 'B', self.size)
+        internals['dHa'] = BufferStructure('T', 'B', self.size,
+                                           is_backward_only=True)
+        return outputs, parameters, internals
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

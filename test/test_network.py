@@ -2,7 +2,8 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm import Network, Gaussian
+from brainstorm import Network
+from brainstorm.initializers import Gaussian
 from brainstorm.layers import Input, Rnn, Lstm
 import numpy as np
 import pytest
@@ -66,9 +67,11 @@ def test_context_slice_allows_continuing_forward_pass(net_with_context):
     outputs = HANDLER.get_numpy_copy(net.buffer.out.outputs.default)
 
     # Check if outputs are the same as final_outputs
-    print("Outputs:\n", outputs[:-1])
-    print("Should match:\n", final_outputs[2:-1])
-    assert np.allclose(outputs[:-1], final_outputs[2:-1])
+    success = np.allclose(outputs[:-1], final_outputs[2:-1])
+    if not success:
+        print("Outputs:\n", outputs[:-1])
+        print("Should match:\n", final_outputs[2:-1])
+        raise AssertionError("Outputs did not match.")
 
     # Check if context is same as final_context
     assert len(context) == len(final_context), "Context list sizes mismatch!"
@@ -77,7 +80,6 @@ def test_context_slice_allows_continuing_forward_pass(net_with_context):
         if x is None:
             assert y is None
         else:
-            print("Context:\n", x)
-            print("Should match:\n", y)
+            # print("Context:\n", x)
+            # print("Should match:\n", y)
             assert np.allclose(x, y)
-

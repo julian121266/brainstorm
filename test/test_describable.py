@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+import json
 import numpy as np
 import pytest
+import brainstorm as bs
 from brainstorm.describable import (Describable, get_description,
                                     create_from_description)
-from brainstorm.handlers.pycuda_handler import PyCudaHandler
+from brainstorm.optional import has_pycuda
 from brainstorm.handlers.numpy_handler import NumpyHandler
 
 
@@ -310,7 +312,9 @@ def test_create_from_description_with_invalid_description_raises():
 
 # ################# test describing handler ###################################
 
+@pytest.mark.skipif(has_pycuda is False, reason='requires pycuda and skcuda')
 def test_describe_pycuda_handler():
+    from brainstorm.handlers.pycuda_handler import PyCudaHandler
     pch = PyCudaHandler()
     d = get_description(pch)
     assert d == {'@type': 'PyCudaHandler', 'init_cudnn': True}
@@ -327,8 +331,6 @@ def test_describe_numpy_handler():
     assert nh2.dtype == np.float32
 
 # ################# test describing a Network #################################
-import brainstorm as bs
-import json
 
 arch = generate_architecture(
     bs.layers.Input(out_shapes={'default': ('T', 'B', 7)}) >>
@@ -345,7 +347,8 @@ def test_describe_network():
         'handler': {'@type': 'NumpyHandler', 'dtype': 'float32'},
         'initializers': {'default': 1},
         'weight_modifiers': {},
-        'gradient_modifiers': {}
+        'gradient_modifiers': {},
+        'default_output': None
     }
 
 
@@ -364,8 +367,8 @@ def test_get_network_from_description():
 # ################# test describing a Trainer #################################
 
 def test_describe_trainer():
-    tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
-                    verbose=False)
+    tr = bs.Trainer(bs.training.SgdStep(learning_rate=0.7),
+                    double_buffering=False, verbose=False)
     tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
 
@@ -387,13 +390,14 @@ def test_describe_trainer():
                 'priority': 2}},
         'stepper': {
             '@type': 'SgdStep',
-            'learning_rate_schedule': 0.7}
+            'learning_rate': 0.7},
+        'train_scorers': []
     }
 
 
 def test_recreate_trainer_from_description():
-    tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
-                    verbose=False)
+    tr = bs.Trainer(bs.training.SgdStep(learning_rate=0.7),
+                    double_buffering=False, verbose=False)
     tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
 
@@ -405,5 +409,5 @@ def test_recreate_trainer_from_description():
     assert tr2.double_buffering is False
     assert list(tr2.hooks.keys()) == ['StopAfterEpoch', 'StopOnNan']
     assert tr2.hooks['StopAfterEpoch'].max_epochs == 23
-    assert isinstance(tr2.stepper, bs.SgdStep)
-    assert tr2.stepper.learning_rate_schedule.value == 0.7
+    assert isinstance(tr2.stepper, bs.training.SgdStep)
+    assert tr2.stepper.learning_rate == 0.7

@@ -19,7 +19,7 @@ from brainstorm.layers.binomial_cross_entropy_layer import \
 from .helpers import run_gradients_test, run_deltas_test, set_up_layer, \
     HANDLER, approx_fprime
 import numpy as np
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.buffer_structure import BufferStructure
 from brainstorm.layers.rnn_layer import RnnLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
@@ -39,19 +39,19 @@ NO_CON = set()
 
 
 def noop_layer(spec):
-    in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
+    in_shapes = {'default': BufferStructure('T', 'B', 5)}
     layer = NoOpLayerImpl('NoOpLayer', in_shapes, NO_CON, NO_CON)
     return layer, spec
 
 
 def loss_layer(spec):
-    in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
+    in_shapes = {'default': BufferStructure('T', 'B', 5)}
     layer = LossLayerImpl('LossLayer', in_shapes, NO_CON, NO_CON)
     return layer, spec
 
 
 def fully_connected_layer(spec):
-    in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
+    in_shapes = {'default': BufferStructure('T', 'B', 5)}
     layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
                                     NO_CON, NO_CON,
                                     size=4,
@@ -60,16 +60,16 @@ def fully_connected_layer(spec):
 
 
 def highway_layer(spec):
-    in_shapes = {'H': ShapeTemplate('T', 'B', 2, 3),
-                 'T': ShapeTemplate('T', 'B', 2, 3),
-                 'x': ShapeTemplate('T', 'B', 2, 3)}
+    in_shapes = {'H': BufferStructure('T', 'B', 2, 3),
+                 'T': BufferStructure('T', 'B', 2, 3),
+                 'x': BufferStructure('T', 'B', 2, 3)}
     layer = HighwayLayerImpl('HighwayLayer', in_shapes, NO_CON, NO_CON)
     return layer, spec
 
 
 def squared_difference_layer(spec):
-    in_shapes = {'inputs_1': ShapeTemplate('T', 'B', 3, 2),
-                 'inputs_2': ShapeTemplate('T', 'B', 3, 2)
+    in_shapes = {'inputs_1': BufferStructure('T', 'B', 3, 2),
+                 'inputs_2': BufferStructure('T', 'B', 3, 2)
                  }
 
     layer = SquaredDifferenceLayerImpl('SquaredDifferenceLayer',
@@ -84,8 +84,8 @@ def binomial_crossentropy_layer(spec):
     shape = (time_steps, batch_size, size)
     default = np.random.rand(*shape)
     targets = np.random.randint(0, 2, shape)
-    in_shapes = {'default': ShapeTemplate('T', 'B', size),
-                 'targets': ShapeTemplate('T', 'B', size)}
+    in_shapes = {'default': BufferStructure('T', 'B', size),
+                 'targets': BufferStructure('T', 'B', size)}
 
     layer = BinomialCrossEntropyLayerImpl('BinomialCrossEntropyError',
                                           in_shapes, NO_CON, NO_CON)
@@ -102,21 +102,21 @@ def classification_layer(spec):
     feature_dim = 5
     shape = (time_steps, batch_size, 1)
     targets = np.random.randint(0, feature_dim, shape)
-    in_shapes = {'default': ShapeTemplate('T', 'B', feature_dim),
-                 'targets': ShapeTemplate('T', 'B', 1)}
+    in_shapes = {'default': BufferStructure('T', 'B', feature_dim),
+                 'targets': BufferStructure('T', 'B', 1)}
 
     layer = ClassificationLayerImpl('ClassificationLayer', in_shapes, NO_CON,
                                     NO_CON, size=feature_dim)
 
     spec['skip_inputs'] = ['targets']
     spec['skip_outputs'] = ['output']
-    spec['target'] = targets
+    spec['targets'] = targets
     return layer, spec
 
 
 def rnn_layer(spec):
     layer = RnnLayerImpl('RnnLayer',
-                         {'default': ShapeTemplate('T', 'B', 5)},
+                         {'default': BufferStructure('T', 'B', 5)},
                          NO_CON, NO_CON,
                          size=7,
                          activation_function=spec['act_func'])
@@ -125,7 +125,7 @@ def rnn_layer(spec):
 
 def lstm_layer(spec):
     layer = LstmLayerImpl('LstmLayer',
-                          {'default': ShapeTemplate('T', 'B', 5)},
+                          {'default': BufferStructure('T', 'B', 5)},
                           NO_CON, NO_CON,
                           size=7,
                           activation_function=spec['act_func'])
@@ -134,17 +134,17 @@ def lstm_layer(spec):
 
 def lstm_opt_layer(spec):
     layer = LstmOptLayerImpl('LstmOptLayer',
-                          {'default': ShapeTemplate('T', 'B', 5)},
-                          NO_CON, NO_CON,
-                          size=7,
-                          activation_function=spec['act_func'])
+                             {'default': BufferStructure('T', 'B', 5)},
+                             NO_CON, NO_CON,
+                             size=7,
+                             activation_function=spec['act_func'])
     return layer, spec
 
 
 def mask_layer(spec):
     layer = MaskLayerImpl('MaskLayer',
-                          {'default': ShapeTemplate('T', 'B', 3, 2),
-                           'mask': ShapeTemplate('T', 'B', 1)},
+                          {'default': BufferStructure('T', 'B', 3, 2),
+                           'mask': BufferStructure('T', 'B', 1)},
                           NO_CON, NO_CON)
     spec['skip_inputs'] = ['mask']
     return layer, spec
@@ -152,7 +152,7 @@ def mask_layer(spec):
 
 def convolution_layer_2d(spec, input_shape=(1, 4, 4),
                          num_filters=1, kernel_size=(2, 2), stride=(1, 1)):
-    x = ShapeTemplate('T', 'B', *input_shape)
+    x = BufferStructure('T', 'B', *input_shape)
     layer = Convolution2DLayerImpl('Convolution2DLayer', {'default': x},
                                    NO_CON, NO_CON, num_filters=num_filters,
                                    kernel_size=kernel_size, stride=stride,
@@ -174,10 +174,10 @@ def convolution_layer_2d_c(spec):
 
 
 def maxpooling_layer_2d(spec):
-    y = ShapeTemplate('T', 'B', 3, 5, 4)
+    y = BufferStructure('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
                                {'default':
-                                ShapeTemplate('T', 'B', 1, 4, 4)},
+                                BufferStructure('T', 'B', 1, 4, 4)},
                                NO_CON, NO_CON,
                                kernel_size=(2, 2), stride=(1, 1),
                                type="max")
@@ -185,10 +185,10 @@ def maxpooling_layer_2d(spec):
 
 
 def avgpooling_layer_2d(spec):
-    y = ShapeTemplate('T', 'B', 3, 5, 4)
+    y = BufferStructure('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
                                {'default':
-                                ShapeTemplate('T', 'B', 1, 4, 4)},
+                                BufferStructure('T', 'B', 1, 4, 4)},
                                NO_CON, NO_CON,
                                kernel_size=(2, 2), stride=(1, 1),
                                type="avg")
@@ -197,16 +197,16 @@ def avgpooling_layer_2d(spec):
 
 def batch_norm_layer(spec):
     layer = BatchNormLayerImpl('BatchNorm',
-                               {'default': ShapeTemplate('T', 'B', 3, 2)},
+                               {'default': BufferStructure('T', 'B', 3, 2)},
                                NO_CON, NO_CON)
     return layer, spec
 
 
 def elementwise_layer(spec):
-    layer = ElementwiseLayerImpl('Op',
-                        {'default': ShapeTemplate('T', 'B', 3, 2)},
-                        NO_CON, NO_CON,
-                        activation_function=spec['act_func'])
+    layer = ElementwiseLayerImpl('Elementwise',
+                                 {'default': BufferStructure('T', 'B', 3, 2)},
+                                 NO_CON, NO_CON,
+                                 activation_function=spec['act_func'])
     return layer, spec
 
 
@@ -251,7 +251,6 @@ ids = [f.__name__ for f in layers_to_test]
 
 spec_list = [
     (1, 1, 'tanh'),
-    (3, 2, 'tanh'),
     (5, 1, 'sigmoid'),
     (2, 3, 'rel'),
     (1, 4, 'linear')]
@@ -301,7 +300,7 @@ def test_gradients_for_layer(layer_specs):
         if outputs_name in skip_outputs:
             continue
 
-        for param_name in layer.get_parameter_structure():
+        for param_name in layer.parameter_shapes:
             if param_name in skip_parameters:
                 continue
             successful &= run_gradients_test(layer, specs, param_name,
@@ -324,11 +323,13 @@ def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
         outputs[key] = HANDLER.get_numpy_copy(value)
 
     # randomize internal state
-    for internal, shape_template in layer.get_internal_structure().items():
+    for internal, shape_template in layer.internal_shapes.items():
         value = layer_buffers.internals[internal]
         if shape_template.scales_with_time:
             # exclude context slice
-            HANDLER.set_from_numpy(value[:time_steps], np.random.randn(time_steps, *value.shape[1:]))
+            HANDLER.set_from_numpy(
+                value[:time_steps],
+                np.random.randn(time_steps, *value.shape[1:]))
         else:
             HANDLER.set_from_numpy(value, np.random.randn(*value.shape))
 
@@ -353,11 +354,13 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
         deltas[key] = HANDLER.get_numpy_copy(value)
 
     # randomize internal state
-    for internal, shape_template in layer.get_internal_structure().items():
+    for internal, shape_template in layer.internal_shapes.items():
         value = layer_buffers.internals[internal]
         if shape_template.scales_with_time:
             # exclude context slice
-            HANDLER.set_from_numpy(value[:time_steps], np.random.randn(time_steps, *value.shape[1:]))
+            HANDLER.set_from_numpy(
+                value[:time_steps],
+                np.random.randn(time_steps, *value.shape[1:]))
         else:
             HANDLER.set_from_numpy(value, np.random.randn(*value.shape))
 
@@ -409,7 +412,7 @@ def test_layer_add_to_deltas(layer_specs):
             print("Adding deltas test failed for {}!".format(key))
             print("Calculated Deltas:\n", value)
             print("Expected Deltas:\n", deltas[key] + 1.0)
-            print("Difference:\n",deltas[key] + 1.0 - value)
+            print("Difference:\n", deltas[key] + 1.0 - value)
         assert passed, key
 
 
@@ -420,8 +423,6 @@ def test_elementwise_act_func_gradients():
     test_shape = (3, 2, 4)
 
     for fwd, bwd in pairs_to_test:
-        print("------------------")
-        print("Testing", fwd.__name__)
         inputs = HANDLER.create_from_numpy(np.random.randn(*test_shape))
         outputs = HANDLER.zeros(test_shape)
         doutputs = HANDLER.ones(test_shape)
@@ -444,6 +445,8 @@ def test_elementwise_act_func_gradients():
 
         close = np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4)
         if not close:
+            print("-----------------------------")
+            print("Testing", fwd.__name__)
             print('-- Approximated Gradient ----')
             print(grad_approx)
             print('---- Calculated Gradient ----')
@@ -469,13 +472,13 @@ def test_layer_constructor():
     c = Connection('l', 'default', 'C', 'default')
 
     l = FullyConnectedLayerImpl('LayerName',
-                                {'default': ShapeTemplate('T', 'B', 5)},
+                                {'default': BufferStructure('T', 'B', 5)},
                                 {c},
                                 {a, b},
                                 size=8)
-    expected = {'default': ShapeTemplate('T', 'B', 8)}
+    expected = {'default': BufferStructure('T', 'B', 8)}
     assert l.out_shapes == expected
-    assert l.in_shapes == {'default': ShapeTemplate('T', 'B', 5)}
+    assert l.in_shapes == {'default': BufferStructure('T', 'B', 5)}
     assert l.incoming == {c}
     assert l.outgoing == {a, b}
     assert l.kwargs == {'size': 8}
@@ -483,14 +486,14 @@ def test_layer_constructor():
 
 def test_nooplayer_raises_on_size_mismatch():
     with pytest.raises(LayerValidationError):
-        l = NoOpLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, set(),
-                          set(), size=8)
+        l = NoOpLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, NO_CON,
+                          NO_CON, size=8)
 
 
 def test_inputlayer_raises_on_in_size():
     with pytest.raises(LayerValidationError):
-        l = InputLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, set(),
-                           set(), out_shapes={'default': ('T', 'B', 5,)})
+        l = InputLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, NO_CON,
+                           NO_CON, out_shapes={'default': ('T', 'B', 5,)})
 
 
 @pytest.mark.parametrize("LayerClass", [
@@ -498,6 +501,6 @@ def test_inputlayer_raises_on_in_size():
 ])
 def test_raises_on_unexpected_kwargs(LayerClass):
     with pytest.raises(LayerValidationError) as excinfo:
-        l = LayerClass('LayerName', {'default': ShapeTemplate(5,)}, set(), set(),
-                       some_foo=16)
+        l = LayerClass('LayerName', {'default': BufferStructure(5,)},
+                       NO_CON, NO_CON, some_foo=16)
     assert 'some_foo' in excinfo.value.args[0]
