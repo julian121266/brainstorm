@@ -2,7 +2,7 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm.layers.ctc_layer import CtcLayerImpl
+from brainstorm.layers.ctc_layer import CtcLayerImpl, calculate_alphas
 
 from brainstorm.utils import LayerValidationError
 from brainstorm.structure.architecture import Connection
@@ -30,6 +30,8 @@ from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
 from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
 from brainstorm.layers.elementwise_layer import ElementwiseLayerImpl
+
+from brainstorm.structure.buffer_structure import (BufferStructure, StructureTemplate)
 
 import pytest
 
@@ -218,8 +220,8 @@ def ctc_layer(spec):
     spec['default'] = inputs
     spec['labels'] = np.random.randint(1, 4, size=(time_steps, batch_size, 1))
     layer = CtcLayerImpl('Ctc',
-                         {'default': ShapeTemplate('T', 'B', 4),
-                          'labels': ShapeTemplate('T', 'B', 1)},
+                         {'default': StructureTemplate('T', 'B', 4),
+                          'labels': StructureTemplate('T', 'B', 1)},
                          NO_CON, NO_CON)
     return layer, spec
 
@@ -504,3 +506,19 @@ def test_raises_on_unexpected_kwargs(LayerClass):
         l = LayerClass('LayerName', {'default': BufferStructure(5,)},
                        NO_CON, NO_CON, some_foo=16)
     assert 'some_foo' in excinfo.value.args[0]
+
+Y = np.array([[.1, .7, .2],
+              [.8, .1, .1],
+              [.3, .3, .4],
+              [.7, .1, .2]]).reshape(4, 3)
+T = [0, 1]
+
+def test_alpha_values():
+    a = calculate_alphas(np.log(Y), T)
+    a_expected = np.array(
+        [[.1, .08, 0, 0],
+         [.7, .08, .048, 0],
+         [0, .56, .192, 0],
+         [0, .07, .284, .1048],
+         [0, 0, .021, .2135]]).T
+    assert np.allclose(np.exp(a), a_expected.reshape(4, 5))
