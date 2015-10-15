@@ -106,12 +106,12 @@ def construct_period_mask(periods, configuration='S2F'):
     offset = 0
     if configuration == 'S2F':
         for p in unique_ps:
-            group_size = periods.count(p)
+            group_size = unique_ps.count(p)
             connection_matrix[offset:, offset:offset + group_size] = 1.0
             offset += group_size
     elif configuration == 'F2S':
         for p in unique_ps:
-            group_size = periods.count(p)
+            group_size = unique_ps.count(p)
             connection_matrix[offset:offset + group_size, offset:] = 1.0
             offset += group_size
     return connection_matrix
@@ -120,7 +120,7 @@ def construct_period_mask(periods, configuration='S2F'):
 def PrepareClockwork(size_cw_net_per_group, n_groups):
     size_cw = size_cw_net_per_group*n_groups
     timing = 1 * np.ones(size_cw_net_per_group, dtype=int)
-    for i in range(1, n_groups-1):
+    for i in range(1, n_groups):
         timing = np.concatenate((timing, pow(2, i) * np.ones(size_cw_net_per_group, dtype=int)), axis=0)
     return size_cw, timing
 
@@ -152,22 +152,27 @@ test_inputs, test_targets, test_mask = prepare_data(test, vocab_dict, sequence_l
 n_classes = len(vocab_dict)
 configuration = 'S2F'
 size_cw, timing = PrepareClockwork(166, 6)
-# config_mask = construct_period_mask(timing, configuration='S2F')
+config_mask = construct_period_mask(timing, configuration='S2F')
 
 inp, out = bs.tools.get_in_out_layers_for_classification(n_classes, n_classes, outlayer_name='out',
                                                    mask_name='mask')
-inp >> bs.layers.LstmPeephole(1000, name='lstm_peep') >> out
-# inp >> bs.layers.ClockworkLstmPeep(size_cw, timing, name='cw_lstm_peep') >> out
+# inp >> bs.layers.LstmPeephole(1000, name='lstm_peep') >> out
+inp >> bs.layers.ClockworkLstmPeep(size_cw, timing, name='cw_lstm_peep') >> out
 network = bs.Network.from_layer(out)
 # network = bs.Network.from_hdf5('penn_corpus_best_lstm_peep_batchsize1.hdf5')
 
 network.set_handler(PyCudaHandler())
-network.initialize({"default": bs.initializers.Gaussian(0.1)}, seed=42)
-# network.initialize({"default": bs.initializers.Gaussian(0.1)}, "lstm_peep": {'Rz': RandInitMatrix(len(timing))*config_mask, 'Ri': RandInitMatrix(len(timing))*config_mask, 'Rf': RandInitMatrix(len(timing))*config_mask, 'Ro': RandInitMatrix(len(timing))*config_mask}, seed=42)
+# network.initialize({"default": bs.initializers.Gaussian(0.1)}, seed=42)
+network.initialize({"default": bs.initializers.Gaussian(0.1), "cw_lstm_peep":\
+    {'Rz': RandInitMatrix(len(timing))*config_mask, 'Ri': RandInitMatrix(len(timing))*config_mask,\
+     'Rf': RandInitMatrix(len(timing))*config_mask, 'Ro': RandInitMatrix(len(timing))*config_mask}}, seed=42)
 
-# network.set_weight_modifiers(LstmPeephole={'Rz': bs.value_modifiers.MaskValues(config_mask), 'Ri': bs.value_modifiers.MaskValues(config_mask), 'Rf': bs.value_modifiers.MaskValues(config_mask), 'Ro': bs.value_modifiers.MaskValues(config_mask)})
+network.set_weight_modifiers({"cw_lstm_peep": {'Rz': bs.value_modifiers.MaskValues(config_mask),\
+                                           'Ri': bs.value_modifiers.MaskValues(config_mask),\
+                                           'Rf': bs.value_modifiers.MaskValues(config_mask),\
+                                           'Ro': bs.value_modifiers.MaskValues(config_mask)}})
 
-# network.set_gradient_modifiers({"lstm_peep": bs.value_modifiers.ClipValues(low=-1., high=1)})
+network.set_gradient_modifiers({"cw_lstm_peep": bs.value_modifiers.ClipValues(low=-1., high=1)})
 
 # ---------------------------- Set up Iterators ----------------------------- #
 train_getter = bs.data_iterators.Minibatches(100, False, mask=train_mask,  # WITH OR WITHOUT SHUFFLING?
@@ -191,7 +196,7 @@ scorers = [bs.scorers.Accuracy(out_name='out.probabilities')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation'))
 trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
-                                          filename='penn_corpus_best_lstm_peepclip2.hdf5',
+                                          filename='penn_corpus_best_cw_lstm1.hdf5',
                                           name='best weights',
                                           criterion='max'))
 #  penn_corpus_best_lstm_peeplong
