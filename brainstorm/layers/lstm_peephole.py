@@ -12,7 +12,7 @@ from brainstorm.utils import LayerValidationError, flatten_time
 
 
 def LstmPeephole(size, activation='tanh', name=None):
-    """Create an LSTM layer."""
+    """Create an LSTM Peephole layer."""
     return ConstructionWrapper.create(LstmPeepholeLayerImpl, size=size,
                                       name=name, activation=activation)
 
@@ -186,10 +186,14 @@ class LstmPeepholeLayerImpl(Layer):
         for t in range(time_size - 1, -1, - 1):
             # Accumulate recurrent deltas
             _h.copy_to(deltas[t], dy[t])
+
             _h.dot_add_mm(dIa[t + 1], Ri, dy[t])
             _h.dot_add_mm(dFa[t + 1], Rf, dy[t])
             _h.dot_add_mm(dOa[t + 1], Ro, dy[t])
             _h.dot_add_mm(dZa[t + 1], Rz, dy[t])
+
+            # DELTA CLIPPING:
+            _h.clip_t(dy[t], -1, 1, dy[t])  # MAYBE THIS IS GRAVES CLIPPING?
 
             # Peephole connection part:
             _h.mult_add_mv(dIa[t + 1], pi, dCa[t])
@@ -219,9 +223,21 @@ class LstmPeepholeLayerImpl(Layer):
             _h.mult_tt(dCa[t], Ib[t], dZb[t])
             self.act_func_deriv(Za[t], Zb[t], dZb[t], dZa[t])
 
+            # DELTA CLIPPING:
+            # _h.clip_t(dIa[t], -1, 1, dIa[t])  # MAYBE THIS IS GRAVES CLIPPING?
+            # _h.clip_t(dFa[t], -1, 1, dFa[t])  # MAYBE THIS IS GRAVES CLIPPING?
+            # _h.clip_t(dOa[t], -1, 1, dOa[t])  # MAYBE THIS IS GRAVES CLIPPING?
+            # _h.clip_t(dZa[t], -1, 1, dZa[t])  # MAYBE THIS IS GRAVES CLIPPING?
+            _h.clip_t(dCa[t], -1, 1, dCa[t])  # MAYBE THIS IS GRAVES CLIPPING?
+
+
+
+
+
         # Same as for standard LSTM:
         flat_inputs = flatten_time(x)
         flat_dinputs = flatten_time(dx)
+
 
         flat_dIa = flatten_time(dIa[:-1])
         flat_dFa = flatten_time(dFa[:-1])
