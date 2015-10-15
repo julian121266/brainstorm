@@ -230,10 +230,6 @@ class LstmPeepholeLayerImpl(Layer):
             # _h.clip_t(dZa[t], -1, 1, dZa[t])  # MAYBE THIS IS GRAVES CLIPPING?
             _h.clip_t(dCa[t], -1, 1, dCa[t])  # MAYBE THIS IS GRAVES CLIPPING?
 
-
-
-
-
         # Same as for standard LSTM:
         flat_inputs = flatten_time(x)
         flat_dinputs = flatten_time(dx)
