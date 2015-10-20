@@ -244,7 +244,7 @@ def clockwork_rnn(spec):
                                   size=7,
                                   activation=spec['act_func'])
     spec['skip_parameters'] = ['timing']
-    spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
+    spec['inits'] = {'timing': np.array([1, 1, 2, 2, 3, 5, 5])}
     return layer, spec
 
 
@@ -256,7 +256,7 @@ def clockwork_lstm(spec):
                                   activation=spec['act_func'])
 
     spec['skip_parameters'] = ['timing']
-    spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
+    spec['inits'] = {'timing': np.array([1, 1, 2, 2, 3, 5, 5])}
     return layer, spec
 
 def lstm_peephole_layer(spec):
@@ -275,7 +275,7 @@ def clockwork_lstm_peephole(spec):
                                   activation=spec['act_func'])
 
     spec['skip_parameters'] = ['timing']
-    spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
+    spec['inits'] = {'timing': np.array([1, 1, 2, 2, 3, 5, 5])}
     return layer, spec
 
 
